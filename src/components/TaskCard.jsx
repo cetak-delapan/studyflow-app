@@ -77,7 +77,7 @@ text-gray-500
 mt-2
 ">
 
-📚 {task.course || "-"}
+Mata Kuliah: {task.course || "-"}
 
 </p>
 
@@ -184,14 +184,7 @@ text-gray-600
 
 <div>
 
-📅
-
-<span className="
-ml-2
-">
-
 Deadline:
-</span>
 
 
 <p className="
@@ -199,7 +192,19 @@ font-medium
 text-gray-800
 ">
 
-{task.deadline}
+{
+new Date(
+task.deadline
+).toLocaleDateString(
+"id-ID",
+{
+day:"numeric",
+month:"long",
+year:"numeric"
+}
+)
+
+}
 
 </p>
 
@@ -212,15 +217,7 @@ text-gray-800
 
 <div>
 
-⏳
-
-<span className="
-ml-2
-">
-
 Estimasi:
-</span>
-
 
 <p className="
 font-medium

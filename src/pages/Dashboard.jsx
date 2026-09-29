@@ -365,8 +365,7 @@ text-gray-500
 mt-2
 ">
 
-Mata Kuliah:
-{nearestDeadline.course || "-"}
+Mata Kuliah: {nearestDeadline.course || "-"}
 
 </p>
 
@@ -378,7 +377,22 @@ text-gray-500
 ">
 
 Deadline:
-{nearestDeadline.deadline}
+
+{" "}
+
+{
+new Date(
+nearestDeadline.deadline
+).toLocaleDateString(
+"id-ID",
+{
+day:"numeric",
+month:"long",
+year:"numeric"
+}
+)
+
+}
 
 </p>
 

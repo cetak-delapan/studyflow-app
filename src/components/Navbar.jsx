@@ -125,49 +125,9 @@ profile?.name || "Mahasiswa"
 
 
 
-<p className="
-text-gray-500
-mt-1
-">
-
-
-{
-
-profile?.major ||
-
-"Selamat datang kembali di StudyFlow"
-
-}
-
-
-
+<p className="text-gray-500 mt-1">
+Mahasiswa Program Studi {profile?.major || ""}
 </p>
-
-
-</div>
-
-
-
-
-<div className="
-bg-white
-px-5
-py-3
-rounded-full
-shadow
-">
-
-
-🎓
-
-{
-
-profile?.role ||
-
-"Mahasiswa"
-
-}
-
 
 
 </div>

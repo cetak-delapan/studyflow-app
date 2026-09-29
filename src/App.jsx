@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
+import Planner from "./pages/Planner";
 
 
 function App(){
@@ -37,6 +38,11 @@ path="/tasks"
 element={<Tasks/>}
 />
 
+
+<Route
+path="/planner"
+element={<Planner/>}
+/>
 
 </Routes>
 

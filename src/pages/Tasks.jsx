@@ -546,7 +546,7 @@ font-bold
 mb-5
 ">
 
-➕ Tambah Tugas
+Tambah Tugas
 
 </h2>
 
@@ -842,7 +842,7 @@ text-xl
 font-bold
 ">
 
-📚 Daftar Tugas
+Daftar Tugas
 
 </h2>
 
