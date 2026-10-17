@@ -207,25 +207,15 @@ setSaving(false);
 
 return (
   <>
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-        Preferensi belajar
-      </p>
-      <h2 className="mt-2 text-xl font-bold tracking-tight text-slate-900">
-        Atur Waktu Belajar
-      </h2>
-      <p className="mt-2 text-sm leading-6 text-slate-500">
-        Tentukan hari dan jam luang yang akan digunakan untuk menyusun jadwal belajar.
-      </p>
-
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100"
-      >
-        Atur waktu belajar
-      </button>
-    </section>
+    <button
+      type="button"
+      onClick={() => setIsOpen(true)}
+      aria-haspopup="dialog"
+      aria-expanded={isOpen}
+      className="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 sm:w-auto"
+    >
+      Tambah Waktu Belajar
+    </button>
 
     {isOpen && (
       <div

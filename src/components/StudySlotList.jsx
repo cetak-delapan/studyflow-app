@@ -25,19 +25,14 @@ const DAY_ORDER = [
 ];
 
 
-export default function StudySlotList(){
-
+export default function StudySlotList({ children }) {
   const { user } = useAuth();
-
   const [slots, setSlots] = useState([]);
-
   const [deletingId, setDeletingId] = useState(null);
 
-
-  // realtime: daftar otomatis ikut berubah saat form menambah data
+  // Daftar diperbarui otomatis ketika preferensi belajar berubah di Firestore.
   useEffect(() => {
-
-    if(!user) return;
+    if (!user) return;
 
     const q = query(
       collection(db, "studyPreferences"),
@@ -45,11 +40,8 @@ export default function StudySlotList(){
     );
 
     const unsubscribe = onSnapshot(
-
       q,
-
       snapshot => {
-
         const data = snapshot.docs
           .map(item => ({
             id: item.id,
@@ -62,188 +54,122 @@ export default function StudySlotList(){
 
         setSlots(data);
       },
-
       error => {
         console.error("Gagal memuat waktu belajar:", error);
       }
-
     );
 
     return unsubscribe;
-
   }, [user]);
 
-
-  async function handleDelete(slot){
-
+  // Hapus slot waktu belajar dari Firebase.
+  async function handleDelete(slot) {
     const ok = window.confirm(
       `Hapus waktu belajar ${slot.day} ${slot.startTime} - ${slot.endTime}?`
     );
 
-    if(!ok) return;
+    if (!ok) return;
 
-    try{
-
+    try {
       setDeletingId(slot.id);
-
       await deleteDoc(doc(db, "studyPreferences", slot.id));
-
-    }
-    catch(error){
-
-      console.error(error);
-
-      alert("Gagal menghapus waktu belajar");
-
-    }
-    finally{
-
+    } catch (error) {
+      console.error("Gagal menghapus waktu belajar:", error);
+      window.alert("Gagal menghapus waktu belajar. Silakan coba lagi.");
+    } finally {
       setDeletingId(null);
-
     }
   }
 
-
-  // tandai entri yang sama persis dengan entri sebelumnya
+  // Tandai entri yang sama persis dengan entri sebelumnya.
   const seen = new Set();
-
   const rows = slots.map(slot => {
-
     const key = `${slot.day}|${slot.startTime}|${slot.endTime}`;
-
     const duplicate = seen.has(key);
-
     seen.add(key);
-
     return { ...slot, duplicate };
   });
-
 
   const totalHours = slots.reduce(
     (sum, slot) => sum + Number(slot.duration || 0),
     0
   );
 
+  return (
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <header className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+            Preferensi belajar
+          </p>
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+            Waktu Belajar Saya
+          </h2>
+          <p className="mt-1 max-w-xl text-sm leading-6 text-slate-500">
+            Slot waktu luang yang digunakan untuk menyusun jadwal belajar otomatis.
+          </p>
+        </div>
 
-  return(
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <span className="w-fit whitespace-nowrap rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600">
+            {slots.length} slot <span className="px-1 text-slate-300">·</span>{" "}
+            {Number(totalHours.toFixed(2))} jam/minggu
+          </span>
+          {children && <div className="w-full sm:w-auto">{children}</div>}
+        </div>
+      </header>
 
-    <div className="bg-white rounded-2xl shadow p-6">
-
-      <div className="flex items-center justify-between">
-
-        <h2 className="text-xl font-bold">
-          🕒 Waktu Belajar Saya
-        </h2>
-
-        <span className="text-sm text-gray-500">
-          {slots.length} slot · {totalHours} jam/minggu
-        </span>
-
-      </div>
-
-
-      {
-        rows.length === 0
-
-        ?
-
-        <p className="mt-4 text-gray-500 text-sm">
-          Belum ada waktu belajar. Tambahkan lewat form di atas.
-        </p>
-
-        :
-
-        <div className="mt-4 space-y-3">
-
-          {
-            rows.map(slot => (
-
-              <div
-                key={slot.id}
-                className="
-                flex
-                items-center
-                justify-between
-                bg-gray-50
-                rounded-xl
-                px-4
-                py-3
-                "
-              >
-
-                <div>
-
-                  <p className="font-semibold">
-
-                    {slot.day}
-
-                    {
-                      slot.duplicate && (
-
-                        <span className="
-                        ml-2
-                        text-xs
-                        bg-yellow-100
-                        text-yellow-700
-                        rounded-full
-                        px-2
-                        py-0.5
-                        ">
-                          Duplikat
-                        </span>
-
-                      )
-                    }
-
+      {rows.length === 0 ? (
+        <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+          <p className="font-semibold text-slate-800">Belum ada waktu belajar</p>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+            Tambahkan hari dan jam luang agar Study Planner dapat menyusun jadwal untuk tugas aktif.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-5 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {rows.map(slot => (
+            <article
+              key={slot.id}
+              className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition-colors hover:border-slate-300"
+            >
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
+                    <span>{slot.day}</span>
+                    {slot.duplicate && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                        Duplikat
+                      </span>
+                    )}
                   </p>
-
-                  <p className="text-sm text-gray-500">
-                    {slot.startTime} - {slot.endTime} · {slot.duration} jam
+                  <p className="mt-2 break-words text-sm font-medium tabular-nums text-slate-700">
+                    {slot.startTime} - {slot.endTime}
                   </p>
-
                 </div>
 
-
-                <button
-
-                  onClick={() => handleDelete(slot)}
-
-                  disabled={deletingId === slot.id}
-
-                  className="
-                  text-sm
-                  text-red-600
-                  border
-                  border-red-200
-                  rounded-lg
-                  px-3
-                  py-1
-                  hover:bg-red-50
-                  disabled:opacity-50
-                  "
-
-                >
-
-                  {deletingId === slot.id ? "Menghapus..." : "🗑️ Hapus"}
-
-                </button>
-
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <span className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold tabular-nums text-slate-600">
+                    {Number(slot.duration || 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })} jam
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(slot)}
+                    disabled={deletingId === slot.id}
+                    className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deletingId === slot.id ? "Menghapus..." : "Hapus"}
+                  </button>
+                </div>
               </div>
-
-            ))
-          }
-
+            </article>
+          ))}
         </div>
-      }
+      )}
 
-
-      <p className="mt-4 text-xs text-gray-400">
-        Setelah menambah atau menghapus waktu belajar, klik
-        Generate Jadwal Otomatis lagi supaya jadwalnya diperbarui.
+      <p className="mt-4 text-xs leading-5 text-slate-400">
+        Setelah menambah atau menghapus waktu belajar, jalankan Generate Jadwal Otomatis kembali agar jadwal menggunakan slot terbaru.
       </p>
-
-    </div>
-
+    </section>
   );
-
 }

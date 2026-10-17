@@ -802,13 +802,12 @@ return (
           </div>
         </section>
 
-        <section className="mt-7 grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-12">
-          <div className="min-w-0 space-y-5 xl:col-span-5">
+        <section className="mt-7 space-y-6">
+          <StudySlotList>
             <StudyTimeForm />
-            <StudySlotList />
-          </div>
+          </StudySlotList>
 
-          <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 xl:col-span-7">
+          <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
