@@ -1,6 +1,40 @@
 const DEFAULT_MODEL = "gemini-3.8-flash";
+const DEFAULT_FALLBACK_MODEL = "gemini-3.6-flash";
 const MAX_MESSAGE_LENGTH = 1500;
 const MAX_HISTORY_ITEMS = 10;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function requestGemini({ model, apiKey, contents }) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+      contents,
+      generationConfig: {
+        temperature: 0.65,
+        maxOutputTokens: 900,
+      },
+    }),
+  });
+
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    // Keep an empty object if the provider returns a non-JSON error response.
+  }
+
+  return { response, data };
+}
 
 const SYSTEM_INSTRUCTION = `Kamu adalah StudyFlow Assistant, asisten akademik yang membantu mahasiswa mengelola tugas dan jadwal belajar.
 Jawab dalam bahasa Indonesia yang jelas, ringkas, sopan, dan praktis. Sesuaikan panjang jawaban dengan pertanyaan.
@@ -147,35 +181,85 @@ export default async function handler(req, res) {
   ];
 
   const model = cleanText(process.env.GEMINI_MODEL || DEFAULT_MODEL, 100);
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const fallbackModel = cleanText(
+    process.env.GEMINI_FALLBACK_MODEL || DEFAULT_FALLBACK_MODEL,
+    100
+  );
 
   let geminiResponse;
   let geminiData;
+  let activeModel = model;
+
   try {
-    geminiResponse = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+    // Retry transient 503 capacity errors with a short exponential backoff.
+    // Do not retry authentication, permission, or malformed-request errors.
+    let result;
+
+    for (const delay of [0, 800, 1600]) {
+      if (delay > 0) await sleep(delay);
+
+      result = await requestGemini({
+        model,
+        apiKey,
         contents,
-        generationConfig: {
-          temperature: 0.65,
-          maxOutputTokens: 900,
-        },
-      }),
-    });
-    geminiData = await geminiResponse.json();
+      });
+
+      if (result.response.ok || result.response.status !== 503) break;
+
+      console.warn(
+        `Gemini model ${model} returned 503; retrying after ${delay || 0}ms.`
+      );
+    }
+
+    geminiResponse = result.response;
+    geminiData = result.data;
+
+    // If the primary model remains overloaded, try a supported stable fallback.
+    if (
+      !geminiResponse.ok &&
+      geminiResponse.status === 503 &&
+      fallbackModel &&
+      fallbackModel !== model
+    ) {
+      console.warn(
+        `Gemini model ${model} remains unavailable; trying fallback ${fallbackModel}.`
+      );
+
+      activeModel = fallbackModel;
+
+      let fallbackResult = await requestGemini({
+        model: fallbackModel,
+        apiKey,
+        contents,
+      });
+
+      if (!fallbackResult.response.ok && fallbackResult.response.status === 503) {
+        await sleep(800);
+        fallbackResult = await requestGemini({
+          model: fallbackModel,
+          apiKey,
+          contents,
+        });
+      }
+
+      geminiResponse = fallbackResult.response;
+      geminiData = fallbackResult.data;
+    }
   } catch (error) {
     console.error("Gemini API tidak dapat dijangkau:", error.message);
-    return sendJson(res, 502, { error: "Tidak dapat menghubungi Gemini API. Coba lagi beberapa saat." });
+    return sendJson(res, 502, {
+      error: "Tidak dapat menghubungi Gemini API. Periksa koneksi server lalu coba lagi.",
+    });
   }
 
   if (!geminiResponse.ok) {
     const providerMessage = cleanText(geminiData?.error?.message, 300);
-    console.error("Gemini API error:", geminiResponse.status, providerMessage);
+    console.error(
+      "Gemini API error:",
+      geminiResponse.status,
+      `model=${activeModel}`,
+      providerMessage
+    );
 
     if (geminiResponse.status === 429) {
       return sendJson(res, 429, {
@@ -183,13 +267,28 @@ export default async function handler(req, res) {
       });
     }
 
-    if (geminiResponse.status === 400 || geminiResponse.status === 403 || geminiResponse.status === 404) {
+    if (
+      geminiResponse.status === 400 ||
+      geminiResponse.status === 403 ||
+      geminiResponse.status === 404
+    ) {
       return sendJson(res, 502, {
-        error: "Gemini menolak permintaan. Periksa API key, akses model, dan pengaturan project. Detail: " + (providerMessage || "tidak tersedia"),
+        error:
+          "Gemini menolak permintaan. Periksa API key, akses model, dan pengaturan project. Detail: " +
+          (providerMessage || "tidak tersedia"),
       });
     }
 
-    return sendJson(res, 502, { error: "Gemini API mengalami kendala. Coba lagi nanti." });
+    if (geminiResponse.status === 503) {
+      return sendJson(res, 503, {
+        error:
+          "Model Gemini utama dan model cadangan sedang sibuk. Tunggu sebentar lalu kirim ulang.",
+      });
+    }
+
+    return sendJson(res, 502, {
+      error: "Gemini API mengalami kendala. Coba lagi nanti.",
+    });
   }
 
   const candidate = geminiData?.candidates?.[0];
@@ -204,5 +303,5 @@ export default async function handler(req, res) {
     });
   }
 
-  return sendJson(res, 200, { reply, model });
+  return sendJson(res, 200, { reply, model: activeModel, fallbackUsed: activeModel !== model });
 }
