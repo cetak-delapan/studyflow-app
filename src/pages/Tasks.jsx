@@ -367,7 +367,6 @@ export default function Tasks() {
         }`}
       >
         <MobileNavbar />
-        <Navbar />
 
         <section className="mx-auto w-full max-w-[1600px]">
           {/* Header halaman */}
